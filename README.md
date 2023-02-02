@@ -40,6 +40,7 @@ Connect to jupyter-lab is you feel like it:
 % conda install jupyterlab
 % conda install -c anaconda ipykernel
 % python -m ipykernel install --user --name=parcon
+% jupyter-lab notebooks/ &
 ```
 
 ## Notebooks
