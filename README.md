@@ -29,6 +29,7 @@ Make conda environment and install the package:
 
 ```
 % conda create --name parcon python=3.9
+% conda activate parcon
 % cd parallel-control-codes
 % pip install .
 ```
