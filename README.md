@@ -53,7 +53,7 @@ mass_experiment.ipynb
 nonlinear_experiment.ipynb
 ```
 
-Directory experiments-ballman contains scripts for running speed experiments. They would work just like:
+Directory experiments-bellman/ contains scripts for running speed experiments. They would work just like:
 
 ```
 % mkdir -p res
