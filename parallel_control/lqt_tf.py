@@ -244,13 +244,13 @@ def lqt_par_fwdbwdpass(x0, Fs, cs, Ls, Hs, rs, Xs, Us, Ss, vs, Kxs, ds, max_para
 # Cost computation
 ###########################################################################
 @tf.function
-def lqt_cost(xs, us, Hs, HT, rs, rT, Xs, XT, Us):
+def lqt_cost(xs, us, Hs, HT, rs, rT, _Xs, XT, _Us):
     drT = mv(HT, xs[-1,...]) - rT
     drs = mv(Hs, xs[:-1,...]) - rs
 
     return 0.5 * tf.reduce_sum(mv(XT, drT) * drT) \
-         + 0.5 * tf.reduce_sum(mv(Xs, drs) * drs) \
-         + 0.5 * tf.reduce_sum(mv(Us, us) * us)
+         + 0.5 * tf.reduce_sum(mv(_Xs, drs) * drs) \
+         + 0.5 * tf.reduce_sum(mv(_Us, us) * us)
 
 ###########################################################################
 # Conversion routines for general cost (with M,s)
