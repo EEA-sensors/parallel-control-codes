@@ -2,6 +2,7 @@
 
 Simo Särkkä and Ángel F. García-Fernández (2023). Temporal Parallelisation of Dynamic Programming and Linear Quadratic Control. IEEE Transactions on Automatic Control. Volume 68, Issue 2, 851-866. Open access: https://ieeexplore-ieee-org.libproxy.aalto.fi/document/9697418
 
+```
 @article{Sarkka_et_al_2023,
   author={S\"arkk\"a, Simo and Garc\'ia-Fern\'andez, \'Angel F.},
   journal={IEEE Transactions on Automatic Control}, 
@@ -12,5 +13,5 @@ Simo Särkkä and Ángel F. García-Fernández (2023). Temporal Parallelisation 
   pages={851-866},
   doi={10.1109/TAC.2022.3147017}
 }
-
+```
 
