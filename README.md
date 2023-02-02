@@ -63,6 +63,6 @@ Directory experiments-bellman/ contains scripts for running speed experiments. T
 ```
 % mkdir -p res
 % cd experiments-bellman
-% cpu_tracking_1.sh
+% sh cpu_tracking_1.sh
 ```
 
