@@ -19,3 +19,45 @@ The aim is also include the codes for https://arxiv.org/abs/2212.11744 here soon
 
 # Instructions
 
+Clone the repository:
+
+```
+% git clone git@github.com:EEA-sensors/parallel-control-codes.git
+```
+
+Make conda environment and install the package:
+
+```
+% conda create --name parcon python=3.9
+% cd parallel-control-codes
+% pip install .
+```
+
+Connect to jupyter-lab is you feel like it:
+
+```
+% conda install jupyterlab
+% conda install -c anaconda ipykernel
+% python -m ipykernel install --user --name=parcon
+```
+
+## Notebooks
+
+Directly notebooks/ contains examples that you can run in jupyterlab:
+
+```
+finite_experiment.ipynb
+linear_experiment.ipynb
+lqr_iter_demo.ipynb
+mass_experiment.ipynb
+nonlinear_experiment.ipynb
+```
+
+Directory experiments-ballman contains scripts for running speed experiments. They would work just like:
+
+```
+% mkdir -p res
+% cd experiments-bellman
+% cpu_tracking_1.sh
+```
+
