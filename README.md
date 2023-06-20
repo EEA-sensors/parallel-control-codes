@@ -2,7 +2,7 @@
 
 The methods have been published in the following papers. If you use the codes in your experiments, feel free to cite all of them:
 
-[1] Simo Särkkä and Ángel F. García-Fernández (2023). Temporal Parallelisation of Dynamic Programming and Linear Quadratic Control. IEEE Transactions on Automatic Control. Volume 68, Issue 2, 851-866.
+*[1] Simo Särkkä and Ángel F. García-Fernández (2023). Temporal Parallelisation of Dynamic Programming and Linear Quadratic Control. IEEE Transactions on Automatic Control. Volume 68, Issue 2, 851-866.*
 
 - Open access: https://ieeexplore.ieee.org/document/9697418
 - arXiv: https://arxiv.org/abs/2104.03186
@@ -20,7 +20,7 @@ The methods have been published in the following papers. If you use the codes in
 }
 ```
 
-[2] Simo Särkkä and Ángel F. García-Fernández (2023). On The Temporal Parallelisation of The Viterbi Algorithm. To appear in proceedings of EUSIPCO.
+*[2] Simo Särkkä and Ángel F. García-Fernández (2023). On The Temporal Parallelisation of The Viterbi Algorithm. To appear in proceedings of EUSIPCO.*
 
 - Preprint: https://users.aalto.fi/~ssarkka/pub/eusipco_2023_viterbi.pdf
 
@@ -33,7 +33,7 @@ The methods have been published in the following papers. If you use the codes in
 }
 ```
 
-[3] Simo Särkkä, Ángel F. García-Fernández. Temporal Parallelisation of the HJB Equation and Continuous-Time Linear Quadratic Control. arXiv:2212.11744
+*[3] Simo Särkkä, Ángel F. García-Fernández. Temporal Parallelisation of the HJB Equation and Continuous-Time Linear Quadratic Control. arXiv:2212.11744*
 
 ```
 @misc{Sarkka_et_al_202x,
@@ -72,7 +72,7 @@ Connect to jupyter-lab is you feel like it:
 % jupyter-lab notebooks/ &
 ```
 
-## Notebooks
+# Notebooks
 
 Directory notebooks/ contains messy examples that you can run in jupyterlab
 -- these are far from being complete, but still demonstrate how to use the
@@ -95,3 +95,35 @@ Directories experiments-bellman/, experiments-viterbi/, and experiments-hjb cont
 % mkdir -p res
 % sh cpu_tracking_1.sh
 ```
+
+# Related papers
+
+The following papers are closely related to the present ones:
+
+*[4] Sakira Hassan, Simo Särkkä, Ángel F. García-Fernández (2021). Temporal Parallelization of Inference in Hidden Markov Models. IEEE Transactions on Signal Processing, Volume 69, Pages 4875-4887.*
+
+- Open access: https://doi.org/10.1109/TSP.2021.3103338
+- arXiv: https://arxiv.org/abs/2102.05743
+- Code: https://github.com/EEA-sensors/sequential-parallelization-examples/tree/main/python/temporal-parallelization-inference-in-HMMs
+
+*[5] Simo Särkkä and Ángel F. García-Fernández (2021). Temporal Parallelization of Bayesian Smoothers. IEEE Transactions on Automatic Control, Volume 66, Issue 1, Pages 299-306.*
+
+- arXiv: https://arxiv.org/abs/1905.13002
+- Code: https://github.com/EEA-sensors/sequential-parallelization-examples/tree/main/python/temporal-parallelization-bayes-smoothers
+
+Furthermore, a good source for all kinds of classical filters and smoothers is the following textbook:
+
+*[6] Simo Särkkä and Lennart Svensson (2023). Bayesian Filtering and Smoothing, Second Edition. Cambridge University Press.*
+
+- Open access: http://users.aalto.fi/~ssarkka/pub/bfs_book_2023_online.pdf
+- Code: https://github.com/EEA-sensors/Bayesian-Filtering-and-Smoothing
+
+
+# Exercise
+
+Kalman filters, RTS smoothers, and LQT regulators are closely related in two ways:
+
+1. Kalman filter and RTS smoother are "duals" of LQT.
+2. Kalman filter and RTS smoother can be derived as a special case of Viterbi algorithm 
+
+*Exercise:* Use the parallel LQT codes in this repository to implement parallel Kalman filters and smoothers introduced in [5] using one or both of the points of view above.
