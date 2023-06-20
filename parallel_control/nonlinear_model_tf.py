@@ -11,7 +11,9 @@ import parallel_control.nonlinear_model_np as nonlinear_model_np
 import unittest
 
 ###########################################################################
+#
 # Nonlinear model functions
+#
 ###########################################################################
 
 def nonlinear_model_f(xs, us, dt=0.1):

@@ -429,8 +429,8 @@ class LQT_np_UnitTest(unittest.TestCase):
         u_list2 = [u + rng.uniform(0, 0.01, size=u.shape) for u in u_list1]
         x_list2 = lqt.seqSimulation(x0, u_list2)
 
-        cost1 = lqt.cost(x_list1, u_list1)
-        cost2 = lqt.cost(x_list2, u_list2)
+        cost1 = lqt.cost(u_list1, x_list1)
+        cost2 = lqt.cost(u_list2, x_list2)
 
         #        print("cost1 = %f" % cost1)
         #        print("cost2 = %f" % cost2)

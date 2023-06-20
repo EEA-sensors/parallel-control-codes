@@ -13,7 +13,17 @@ def lti_disc(F, L, Qc=None, dt=1.0):
           dx/dt = F x + L w,
         where w is a white noise with spectral density Qc to
           x[k+1] = A x[k] + w_k, w_k ~ N(0,Q)
-        """
+
+    Parameters:
+        F: State feedback matrix.
+        L: Noise gain matrix.
+        Qc: Noise covariance matrix (default identity), if scalar qc, then this is qc * eye(1).
+        dt: Time step (default 1.0).
+
+    Returns:
+        A: Discrete-time state transition matrix.
+        Q: Discrete-time process noise covariance matrix.
+    """
     n = F.shape[0]
 
     if Qc is None:
@@ -37,7 +47,19 @@ def lti_disc_u(F, L, G=None, Qc=None, dt=1.0):
           dx/dt = F x + G u + L w,
         where w is a white noise with spectral density Qc to
           x[k+1] = A x[k] + B u[k] + w_k, w_k ~ N(0,Q)
-        """
+
+    Parameters:
+        F: State feedback matrix.
+        L: Noise gain matrix.
+        G: Input gain matrix (default identity).
+        Qc: Noise covariance matrix (default identity), if scalar qc, then this is qc * eye(1).
+        dt: Time step (default 1.0).
+
+    Returns:
+        A: Discrete-time state transition matrix.
+        B: Discrete-time input gain matrix.
+        Q: Discrete-time process noise covariance matrix.
+    """
     A, Q = lti_disc(F, L, Qc, dt)
 
     n = F.shape[0]

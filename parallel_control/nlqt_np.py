@@ -4,13 +4,31 @@ Numpy-based Nonlinear (iterated) Linear Quadratic Tracker.
 @author: Simo Särkkä
 """
 
+###########################################################################
+#
+# Nonlinear iterated Linear Quadratic Tracker
+#
+###########################################################################
+
 class NLQT:
 
     def __init__(self,lqt,model):
+        """ Form nonlinear iterated linear quadratic tracker.
+
+        Parameters:
+            lqt: Linear quadratic tracker.
+            model: NonlinearModel object.
+        """
         self.lqt = lqt
         self.model = model
 
     def linearize(self, u_list, x_list):
+        """ Linearize model around trajectory.
+
+        Parameters:
+            u_list: List of control inputs.
+            x_list: List of states.
+        """
         for k in range(len(u_list)):
             x = x_list[k]
             u = u_list[k]
@@ -28,6 +46,17 @@ class NLQT:
             self.lqt.L[k] = L
 
     def iterate(self, u_list, x_list, lqt_method=0):
+        """ Iterate the nonlinear linear quadratic tracker.
+
+        Parameters:
+            u_list: List of control inputs.
+            x_list: List of states.
+            lqt_method: 0 = parallel, 1 = parallel fw/bw, 2 = sequential.
+
+        Returns:
+            u_list: List of updated control inputs.
+            x_list: List of updated states.
+        """
         self.linearize(u_list, x_list)
         if lqt_method == 0:
             Kx_list, d_list, S_list, v_list = self.lqt.parBackwardPass()
@@ -41,6 +70,15 @@ class NLQT:
         return u_list, x_list
 
     def simulate(self, x0, u_data):
+        """ Simulate the controlled nonlinear model.
+
+        Parameters:
+            x0: Initial state.
+            u_data: List of control inputs.
+
+        Returns:
+            x_list: List of states.
+        """
         x_list = [x0]
         x = x0
         for k in range(len(u_data)):
@@ -50,7 +88,16 @@ class NLQT:
         return x_list
 
     def cost(self, x0, u_list):
+        """ Evaluate the cost given a control input sequence.
+
+        Parameters:
+            x0: Initial state.
+            u_list: List of control inputs.
+
+        Returns:
+            J: Cost.
+        """
         x_list = self.simulate(x0, u_list)
-        return self.lqt.cost(x_list, u_list)
+        return self.lqt.cost(u_list, x_list)
 
 

@@ -8,14 +8,44 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import math
 
+# Abbreviations to make the code more readable
 mm = tf.linalg.matmul
 mv = tf.linalg.matvec
+
+###########################################################################
+#
+# Recall that the LQT model is
+#
+#     x[k+1] = F[k] x[k] + c[k] + L[k] u[k]
+#       J(u) = E{ 1/2 (H[T] x[T] - r[T)].T X[T] (H[T] x[T] - r[T])
+#         + sum_{k=0}^{T-1} 1/2 (H[k] x[k] - r[k]).T X[k] (H[k] x[k] - r[k])
+#                         + 1/2 (Z[k] u[k] - s[k]).T U[k] (Z[k] u[k] - s[k])
+#                             + (H[k] x[k] - r[k]).T M[k] (Z[k] u[k] - s[k]) }
+#
+###########################################################################
+
 
 ###########################################################################
 # Misc utilities
 ###########################################################################
 
 def lqt_np_to_tf(lqt, dtype=tf.float64):
+    """ Convert LQT object to TensorFlow tensors.
+
+    Parameters:
+        lqt: LQT object
+
+    Returns
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Hs: Batched tensor of H matrices
+        HT: The final H matrix
+        rs: Batched tensor of r vectors
+        rT: The final r vector
+        Xs: Batched tensor of X matrices
+        XT: The final X matrix
+    """
     Fs = tf.convert_to_tensor(lqt.F,  dtype=dtype)
     cs = tf.convert_to_tensor(lqt.c,  dtype=dtype)
     Ls = tf.convert_to_tensor(lqt.L,  dtype=dtype)
@@ -30,6 +60,26 @@ def lqt_np_to_tf(lqt, dtype=tf.float64):
     return Fs, cs, Ls, Hs, HT, rs, rT, Xs, XT, Us
 
 def lqt_np_to_tf_gen(lqt, dtype=tf.float64):
+    """ Convert a more general form LQT object to TensorFlow tensors.
+
+    Parameters:
+        lqt: LQT object
+
+    Returns:
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Hs: Batched tensor of H matrices
+        HT: The final H matrix
+        rs: Batched tensor of r vectors
+        rT: The final r vector
+        Xs: Batched tensor of X matrices
+        XT: The final X matrix
+        Us: Batched tensor of U matrices
+        Ms: Batched tensor of M matrices
+        ss: Batched tensor of s vectors
+    """
+
     Fs = tf.convert_to_tensor(lqt.F,  dtype=dtype)
     cs = tf.convert_to_tensor(lqt.c,  dtype=dtype)
     Ls = tf.convert_to_tensor(lqt.L,  dtype=dtype)
@@ -51,7 +101,31 @@ def lqt_np_to_tf_gen(lqt, dtype=tf.float64):
 
 @tf.function
 def lqt_seq_backwardpass(Fs, cs, Ls, Hs, HT, rs, rT, Xs, XT, Us):
+    """ Sequential backward pass of LQT.
+
+    Parameters:
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Hs: Batched tensor of H matrices
+        HT: The final H matrix
+        rs: Batched tensor of r vectors
+        rT: The final r vector
+        Xs: Batched tensor of X matrices
+        XT: The final X matrix
+        Us: Batched tensor of U matrices
+    """
+
     def body(carry, inputs):
+        """ Body for scan for the sequential backward pass of LQT.
+
+        Parameters:
+            carry: Tuple of (S, v, X, U)
+            inputs: Tuple of (F, c, L, H, r, X, U)
+
+        Returns:
+            carry: Tuple of (S, v, X, U)
+        """
         F, c, L, H, r, X, U = inputs
         S, v, _, _ = carry
 
@@ -79,7 +153,32 @@ def lqt_seq_backwardpass(Fs, cs, Ls, Hs, HT, rs, rT, Xs, XT, Us):
 
 @tf.function
 def lqt_seq_forwardpass(x0, Fs, cs, Ls, Kxs, ds):
+    """ Sequential forward pass of LQT.
+
+    Parameters:
+        x0: Initial state
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Kxs: Control gains
+        ds: Control offsets
+
+    Returns:
+        xs: State trajectories
+        us: Control trajectories
+    """
+
     def body(carry, inputs):
+        """ Body for scan for the sequential forward pass of LQT.
+
+        Parameters:
+            carry: Tuple of (x, u)
+            inputs: Tuple of (F, c, L, Kx, d)
+
+        Returns:
+            carry: Tuple of (x, u)
+        """
+
         F, c, L, Kx, d = inputs
         x, _ = carry
 
@@ -102,6 +201,25 @@ def lqt_seq_forwardpass(x0, Fs, cs, Ls, Kxs, ds):
 ###########################################################################
 
 def lqt_par_backwardpass_init_most(Fs, cs, Ls, Hs, rs, Xs, Us):
+    """ Initialize the general elements of parallel backward pass of LQT.
+
+    Parameters:
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Hs: Batched tensor of H matrices
+        rs: Batched tensor of r vectors
+        Xs: Batched tensor of X matrices
+        Us: Batched tensor of U matrices
+
+    Returns:
+        As: Batched tensor of A matrices
+        bs: Batched tensor of b vectors
+        Cs: Batched tensor of C matrices
+        etas: Batched tensor of eta vectors
+        Js: Batched tensor of J matrices
+    """
+
     As = Fs
     bs = cs
     Cs = mm(Ls, tf.linalg.solve(Us, tf.transpose(Ls, perm=[0,2,1])))
@@ -110,6 +228,21 @@ def lqt_par_backwardpass_init_most(Fs, cs, Ls, Hs, rs, Xs, Us):
     return As, bs, Cs, etas, Js
 
 def lqt_par_backwardpass_init_last(HT, rT, XT):
+    """ Initialize the last element of parallel backward pass of LQT.
+
+    Parameters:
+        HT: The final H matrix
+        rT: The final r vector
+        XT: The final X matrix
+
+    Returns:
+        A: The final A matrix
+        b: The final b vector
+        C: The final C matrix
+        eta: The final eta vector
+        J: The final J matrix
+    """
+
     nx = HT.shape[1]
     A = tf.zeros((nx,nx), dtype=HT.dtype) # TODO: Check the device
     b = tf.zeros(nx, dtype=HT.dtype)
@@ -119,6 +252,15 @@ def lqt_par_backwardpass_init_last(HT, rT, XT):
     return A, b, C, eta, J
 
 def lqt_par_comb_V(elemij, elemjk):
+    """ Combine two elements at the parallel backward pass of LQT.
+
+    Parameters:
+        elemij: Tuple of (Aij, bij, Cij, etaij, Jij)
+        elemjk: Tuple of (Ajk, bjk, Cjk, etajk, Jjk)
+
+    Returns:
+        Aik, bik, Cik, etaik, Jik: Combined elements
+    """
     Aij, bij, Cij, etaij, Jij = elemij
     Ajk, bjk, Cjk, etajk, Jjk = elemjk
 
@@ -135,10 +277,41 @@ def lqt_par_comb_V(elemij, elemjk):
     return Aik, bik, Cik, etaik, Jik
 
 def lqt_par_comb_V_rev(elemjk, elemij):
+    """ Combine two elements at the parallel backward pass of LQT in reverse order.
+
+    Parameters:
+        elemjk: Tuple of (Ajk, bjk, Cjk, etajk, Jjk)
+        elemij: Tuple of (Aij, bij, Cij, etaij, Jij)
+
+    Returns:
+        Aik, bik, Cik, etaik, Jik: Combined elements
+    """
     return lqt_par_comb_V(elemij, elemjk)
 
 @tf.function
 def lqt_par_backwardpass(Fs, cs, Ls, Hs, HT, rs, rT, Xs, XT, Us, max_parallel=10000):
+    """ Parallel backward pass of LQT.
+
+    Parameters:
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Hs: Batched tensor of H matrices
+        HT: The final H matrix
+        rs: Batched tensor of r vectors
+        rT: The final r vector
+        Xs: Batched tensor of X matrices
+        XT: The final X matrix
+        Us: Batched tensor of U matrices
+        max_parallel: Maximum number of parallel operations for tfp.math.scan_associative
+
+    Returns:
+        Ss: Batched tensor of value function matrices
+        vs: Batched tensor of value function vectors
+        Kxs: Batched tensor of control gain matrices
+        ds: Batched tensor of control offsets
+    """
+
     elems_most = lqt_par_backwardpass_init_most(Fs, cs, Ls, Hs, rs, Xs, Us)
     elems_last = lqt_par_backwardpass_init_last(HT, rT, XT)
 
@@ -166,16 +339,53 @@ def lqt_par_backwardpass(Fs, cs, Ls, Hs, HT, rs, rT, Xs, XT, Us, max_parallel=10
 ###########################################################################
 
 def lqt_par_forwardpass_init_first(x0, F, c, L, Kx, d):
+    """ Initialize the first element of the parallel forward pass of LQT.
+
+    Parameters:
+        x0: Initial state
+        F: F matrix
+        c: c vector
+        L: L matrix
+        Kx: Control gain matrix
+        d: Control offset vector
+
+    Returns:
+        tF: Initial tF matrix
+        tc: Initial tc vector
+    """
     tF = tf.zeros_like(F)
     tc = mv(F - mm(L, Kx), x0) + c + mv(L, d)
     return tF, tc
 
 def lqt_par_forwardpass_init_most(Fs, cs, Ls, Kxs, ds):
+    """ Initialize the general elements of the parallel forward pass of LQT.
+
+    Parameters:
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Kxs: Batched tensor of control gain matrices
+        ds: Batched tensor of control offset vectors
+
+    Returns:
+        tF: Batched tensor of initial tF matrices
+        tc: Batched tensor of initial tc vectors
+    """
     tF = Fs - mm(Ls, Kxs)
     tc = cs + mv(Ls, ds)
     return tF, tc
 
 def lqt_par_comb_f(elemij, elemjk):
+    """ Combine two elements at the parallel forward pass of LQT.
+
+    Parameters:
+        elemij: Tuple of (Fij, cij)
+        elemjk: Tuple of (Fjk, cjk)
+
+    Returns:
+        Fik, cik: Combined elements
+    """
+
     Fij, cij = elemij
     Fjk, cjk = elemjk
     Fik = mm(Fjk, Fij)
@@ -184,6 +394,21 @@ def lqt_par_comb_f(elemij, elemjk):
 
 @tf.function
 def lqt_par_forwardpass(x0, Fs, cs, Ls, Kxs, ds, max_parallel=10000):
+    """ Parallel forward pass of LQT.
+
+    Parameters:
+        x0: Initial state
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Kxs: Batched tensor of control gain matrices
+        ds: Batched tensor of control offset vectors
+        max_parallel: Maximum number of parallel operations for tfp.math.scan_associative
+
+    Returns:
+        xs: State trajectories
+        us: Control trajectories
+    """
     elems_first = lqt_par_forwardpass_init_first(x0, Fs[0], cs[0], Ls[0], Kxs[0], ds[0])
     elems_most  = lqt_par_forwardpass_init_most(Fs[1:], cs[1:], Ls[1:], Kxs[1:], ds[1:])
 
@@ -204,7 +429,19 @@ def lqt_par_forwardpass(x0, Fs, cs, Ls, Kxs, ds, max_parallel=10000):
 # Parallel LQT forward pass with value function combination
 ###########################################################################
 def lqt_par_fwdbwdpass_init_first(x0):
-    A = tf.zeros((x0.shape[0],x0.shape[0]), dtype=x0.dtype) # TODO: Check device
+    """ Initialize the first element of the parallel forward-backward pass of LQT.
+
+    Parameters:
+        x0: Initial state
+
+    Returns:
+        A: Initial A matrix
+        b: Initial b vector
+        C: Initial C matrix
+        eta: Initial eta vector
+        J: Initial J matrix
+    """
+    A = tf.zeros((x0.shape[0],x0.shape[0]), dtype=x0.dtype)
     b = x0
     C = tf.zeros_like(A)
     eta = tf.zeros_like(x0)
@@ -212,6 +449,24 @@ def lqt_par_fwdbwdpass_init_first(x0):
     return A, b, C, eta, J
 
 def lqt_par_fwdbwdpass_init_most(Fs, cs, Ls, Hs, rs, Xs, Us):
+    """ Initialize the general elements of the parallel forward-backward pass of LQT.
+
+    Parameters:
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Hs: Batched tensor of H matrices
+        rs: Batched tensor of r vectors
+        Xs: Batched tensor of X matrices
+        Us: Batched tensor of U matrices
+
+    Returns:
+        As: Batched tensor of A matrices
+        bs: Batched tensor of b vectors
+        Cs: Batched tensor of C matrices
+        etas: Batched tensor of eta vectors
+        Js: Batched tensor of J matrices
+    """
     As = Fs
     bs = cs
     Cs = mm(Ls, tf.linalg.solve(Us, tf.transpose(Ls, perm=[0,2,1])))
@@ -221,6 +476,28 @@ def lqt_par_fwdbwdpass_init_most(Fs, cs, Ls, Hs, rs, Xs, Us):
 
 @tf.function
 def lqt_par_fwdbwdpass(x0, Fs, cs, Ls, Hs, rs, Xs, Us, Ss, vs, Kxs, ds, max_parallel=10000):
+    """ Parallel forward-backward pass of LQT.
+
+    Parameters:
+        x0: Initial state
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Hs: Batched tensor of H matrices
+        rs: Batched tensor of r vectors
+        Xs: Batched tensor of X matrices
+        Us: Batched tensor of U matrices
+        Ss: Batched tensor of value function matrices
+        vs: Batched tensor of value function vectors
+        Kxs: Batched tensor of control gain matrices
+        ds: Batched tensor of control offset vectors
+        max_parallel: Maximum number of parallel operations for tfp.math.scan_associative
+
+    Returns:
+        xs: State trajectories
+        us: Control trajectories
+    """
+
     elems_first = lqt_par_fwdbwdpass_init_first(x0)
     elems_most  = lqt_par_fwdbwdpass_init_most(Fs, cs, Ls, Hs, rs, Xs, Us)
 
@@ -244,13 +521,29 @@ def lqt_par_fwdbwdpass(x0, Fs, cs, Ls, Hs, rs, Xs, Us, Ss, vs, Kxs, ds, max_para
 # Cost computation
 ###########################################################################
 @tf.function
-def lqt_cost(xs, us, Hs, HT, rs, rT, _Xs, XT, _Us):
+def lqt_cost(xs, us, Hs, HT, rs, rT, Xs, XT, Us):
+    """ Compute the cost of a LQT trajectory.
+
+    Parameters:
+        xs: State trajectory
+        us: Control trajectory
+        Hs: Batched tensor of H matrices
+        HT: Terminal H matrix
+        rs: Batched tensor of r vectors
+        rT: Terminal r vector
+        Xs: Batched tensor of X matrices
+        XT: Terminal X matrix
+        Us: Batched tensor of U matrices
+
+    Returns:
+        cost: Cost of the trajectory
+    """
     drT = mv(HT, xs[-1,...]) - rT
     drs = mv(Hs, xs[:-1,...]) - rs
 
     return 0.5 * tf.reduce_sum(mv(XT, drT) * drT) \
-         + 0.5 * tf.reduce_sum(mv(_Xs, drs) * drs) \
-         + 0.5 * tf.reduce_sum(mv(_Us, us) * us)
+         + 0.5 * tf.reduce_sum(mv(Xs, drs) * drs) \
+         + 0.5 * tf.reduce_sum(mv(Us, us) * us)
 
 ###########################################################################
 # Conversion routines for general cost (with M,s)
@@ -258,6 +551,25 @@ def lqt_cost(xs, us, Hs, HT, rs, rT, _Xs, XT, _Us):
 
 @tf.function
 def lqt_gen_to_canon(Fs, cs, Ls, Hs, rs, Xs, Us, Ms, ss):
+    """ Convert a general LQT cost to canonical form.
+
+    Parameters:
+        Fs: Batched tensor of F matrices
+        cs: Batched tensor of c vectors
+        Ls: Batched tensor of L matrices
+        Hs: Batched tensor of H matrices
+        rs: Batched tensor of r vectors
+        Xs: Batched tensor of X matrices
+        Us: Batched tensor of U matrices
+        Ms: Batched tensor of M matrices
+        ss: Batched tensor of s vectors
+
+    Returns:
+        Fs_new: Batched tensor of F matrices
+        cs_new: Batched tensor of c vectors
+        Xs_new: Batched tensor of X matrices
+    """
+
     CF = tf.linalg.cholesky(Us)
     Fs_new = Fs - mm(Ls, tf.linalg.cholesky_solve(CF, mm(Ms, Hs, transpose_a=True)))
     tmp = tf.linalg.cholesky_solve(CF, tf.expand_dims(mv(Ms, rs, transpose_a=True), -1))[..., 0]
@@ -267,6 +579,22 @@ def lqt_gen_to_canon(Fs, cs, Ls, Hs, rs, Xs, Us, Ms, ss):
 
 @tf.function
 def lqt_canon_to_gen(Kxs, ds, Hs, rs, Us, Ms, ss):
+    """ Convert a canonical LQT control law to general form.
+
+    Parameters:
+        Kxs: Control gain matrices
+        ds: Control offset vectors
+        Hs: Batched tensor of H matrices
+        rs: Batched tensor of r vectors
+        Us: Batched tensor of U matrices
+        Ms: Batched tensor of M matrices
+        ss: Batched tensor of s vectors
+
+    Returns:
+        Kxs_new: Control gain matrices
+        ds_new: Control offset vectors
+    """
+
     CF = tf.linalg.cholesky(Us)
     Kxs_new = Kxs + tf.linalg.cholesky_solve(CF, mm(Ms, Hs, transpose_a=True))
     tmp = tf.linalg.cholesky_solve(CF, tf.expand_dims(mv(Ms, rs, transpose_a=True), -1))[..., 0]

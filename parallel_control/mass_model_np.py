@@ -20,10 +20,19 @@ import parallel_control.disc as disc
 import parallel_control.lqt_np as lqt_np
 
 ###########################################################################
+#
+# Mass model
+#
+###########################################################################
 
 class MassModel:
 
     def __init__(self, N=5):
+        """ Form linear mass model with quadratic cost.
+
+        Parameters:
+            N: Number of masses (default 5).
+        """
         self.X  = np.eye(2*N)
         self.U  = 0.1 * np.eye(2)
         self.XT = np.eye(2*N)
@@ -56,6 +65,15 @@ class MassModel:
             self.x0[N-1] = 1
 
     def getLQT(self, dt=0.005, Tf=10.0):
+        """ Get LQT for the problem.
+
+        Parameters:
+            dt: Sampling interval (default 0.005).
+            Tf: Final time (default 10.0).
+
+        Returns:
+            lqt: LQT object.
+        """
         G  = self.Lc
         Qc = np.eye(self.Lc.shape[1])
         F, L, Q = disc.lti_disc_u(self.Fc, self.Lc, G, Qc, dt)

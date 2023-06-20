@@ -11,15 +11,32 @@ import parallel_control.lqt_np as lqt_np
 import unittest
 
 ###########################################################################
+#
 # Nonlinear model class
+#
 ###########################################################################
 
 class NonlinearModel:
     def __init__(self, dt=0.1, seed=123):
+        """ Constructor.
+
+        Parameters:
+            dt: Sampling period.
+            seed: Random seed.
+        """
         self.dt = dt
         self.seed = seed
 
     def f(self, x, u):
+        """ Nonlinear model function.
+
+        Parameters:
+            x: State vector.
+            u: Control vector.
+
+        Returns:
+            x_new: New state vector.
+        """
         # x = [px,py,theta,sp], u = [acc,turnrate]
         x_new = np.array([x[0] + x[3] * math.cos(x[2]) * self.dt,
                           x[1] + x[3] * math.sin(x[2]) * self.dt,
@@ -29,6 +46,15 @@ class NonlinearModel:
         return x_new
 
     def Fx(self, x, u):
+        """ Jacobian of f w.r.t. x.
+
+        Parameters:
+            x: State vector.
+            u: Control vector.
+
+        Returns:
+            Fx: Jacobian of f w.r.t. x.
+        """
         d_dx = np.array([[1.0,0.0,-x[3] * math.sin(x[2]) * self.dt,math.cos(x[2]) * self.dt],
                          [0.0,1.0, x[3] * math.cos(x[2]) * self.dt,math.sin(x[2]) * self.dt],
                          [0.0,0.0,1.0,0.0],
@@ -37,6 +63,15 @@ class NonlinearModel:
         return d_dx
 
     def Fu(self, x, u):
+        """ Jacobian of f w.r.t. u.
+
+        Parameters:
+            x: State vector.
+            u: Control vector.
+
+        Returns:
+            Fu: Jacobian of f w.r.t. u.
+        """
         d_du = np.array([[0.0,0.0],
                          [0.0,0.0],
                          [0.0,self.dt],
@@ -45,6 +80,17 @@ class NonlinearModel:
         return d_du
 
     def genData(self, N, steps=10):
+        """ Generate data from the model.
+
+        Parameters:
+            N: Total number of data points.
+            steps: Stepping of the returned measurements.
+
+        Returns:
+            xyt: Numpy array of [x,y,theta] data.
+            xyt_dense: Numpy array of [x,y,theta] data with steps=1.
+
+        """
         tt = np.linspace(0, 2 * np.pi, N)
         x_data = 7 + 4.0 * np.cos(tt) + 2.0 * np.sin(2 * tt) + 2.0 * np.cos(3 * tt)
         y_data = 7 + 3.0 * np.sin(tt) - 1.0 * np.sin(2 * tt) + 2.0 * np.sin(3 * tt)
@@ -66,6 +112,17 @@ class NonlinearModel:
         return xyt, xyt_dense
 
     def initialGuess(self, lqt, x0, init_to_zero=True):
+        """" Generate initial guess for the nonlinear LQT.
+
+        Parameters:
+            lqt: LQT object.
+            x0: Initial state.
+            init_to_zero: If True, initial guess is set to zero.
+
+        Returns:
+            x_list: List of state vectors.
+            u_list: List of control vectors.
+        """
         x_list = [x0]
         u_list = []
 
@@ -99,6 +156,16 @@ class NonlinearModel:
         return u_list, x_list
 
     def getLQT(self, xyt, steps=10):
+        """ Get the LQT for the model.
+
+        Parameters:
+            xyt: Numpy array of [x,y,theta] data.
+            steps: Stepping of the returned measurements.
+
+        Returns:
+            lqt: LQT object.
+            x0: Initial state.
+        """
         U = np.diag([1.0,100.0])
         H = np.array([[1.0,0.0,0.0,0.0],
                       [0.0,1.0,0.0,0.0],

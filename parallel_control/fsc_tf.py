@@ -15,6 +15,17 @@ import math
 ###########################################################################
 
 def fsc_np_to_tf(fsc, dtype=tf.float64):
+    """ Convert a finite-state controller from NumPy to TensorFlow format.
+
+    Parameters:
+        fsc: Finite-state controller object.
+        dtype: Data type (default tf.float64).
+
+    Returns:
+        fs: Tensor of state transition matrices.
+        Ls: Tensor of cost matrices.
+        LT: Terminal cost vector.
+    """
     fs = tf.convert_to_tensor(fsc.f, dtype=tf.int32)
     Ls = tf.convert_to_tensor(fsc.L, dtype=dtype)
     LT = tf.convert_to_tensor(fsc.LT, dtype=dtype)
@@ -26,6 +37,17 @@ def fsc_np_to_tf(fsc, dtype=tf.float64):
 
 @tf.function
 def fsc_seq_backwardpass(fs, Ls, LT):
+    """ Run sequential backward pass for a finite-state controller.
+
+    Parameters:
+        fs: Tensor of state transition matrices.
+        Ls: Tensor of cost matrices.
+        LT: Terminal cost vector.
+
+    Returns:
+        us: Tensor of optimal control actions.
+        Vs: Tensor of optimal cost-to-go matrices.
+    """
     def body(carry, inputs):
         f, L = inputs
         V, _ = carry
@@ -49,6 +71,17 @@ def fsc_seq_backwardpass(fs, Ls, LT):
 
 @tf.function
 def fsc_seq_forwardpass(x0, fs, us):
+    """ Run sequential forward pass for a finite-state controller.
+
+    Parameters:
+        x0: Initial state.
+        fs: Tensor of state transition matrices.
+        us: Tensor of optimal control actions.
+
+    Returns:
+        min_xs: Tensor of optimal state trajectories.
+        min_us: Tensor of optimal controls.
+    """
     def body(carry, inputs):
         f, u = inputs
         min_x, _ = carry
@@ -71,6 +104,15 @@ def fsc_seq_forwardpass(x0, fs, us):
 ###########################################################################
 
 def fsc_par_backwardpass_init_most(fs, Ls):
+    """ Initialize general parallel backward pass elements for a finite-state controller.
+
+    Parameters:
+        fs: Tensor of state transition matrices.
+        Ls: Tensor of cost matrices.
+
+    Returns:
+        Vs: Initialized value conditional value matrix elements.
+    """
     nb = fs.shape[0]
     nx = fs.shape[1]
     nu = fs.shape[2]
@@ -91,19 +133,57 @@ def fsc_par_backwardpass_init_most(fs, Ls):
     return Vs
 
 def fsc_par_backwardpass_init_last(LT):
+    """ Initialize terminal parallel backward pass element for a finite-state controller.
+
+    Parameters:
+        LT: Terminal costs.
+
+    Returns:
+        VT: Initialized terminal conditional value function element.
+    """
     VT = tf.tile(tf.expand_dims(LT,-1), (1,LT.shape[0]))
     return VT
 
 def fsc_par_comb_V(Vij, Vjk):
+    """ Combine two conditional value function elements for a finite-state controller.
+
+    Parameters:
+        Vij: Value function element for i -> j.
+        Vjk: Value function element for j -> k.
+
+    Returns:
+        Vik: Value function element for i -> k.
+    """
     Vik = tf.reduce_min(tf.expand_dims(Vij,-1) + tf.expand_dims(Vjk,1), axis=2)
     return Vik
 
 def fsc_par_comb_V_rev(Vjk, Vij):
+    """ Combine two conditional value function elements for a finite-state controller in reverse order.
+
+    Parameters:
+        Vjk: Value function element for j -> k.
+        Vij: Value function element for i -> j.
+
+    Returns:
+        Vik: Value function element for i -> k.
+    """
     return fsc_par_comb_V(Vij, Vjk)
 
 
 @tf.function
 def fsc_par_backwardpass(fs, Ls, LT, max_parallel=10000):
+    """ Run parallel backward pass for a finite-state controller.
+
+    Parameters:
+        fs: Tensor of state transition matrices.
+        Ls: Tensor of cost matrices.
+        LT: Terminal cost vector.
+        max_parallel: Maximum number of parallel operations for tfp.math.scan_associative.
+
+    Returns:
+        us: Tensor of optimal control actions.
+        Vs: Tensor of optimal cost-to-go matrices.
+    """
     elems_most = fsc_par_backwardpass_init_most(fs, Ls)
     elems_last = fsc_par_backwardpass_init_last(LT)
 
@@ -126,10 +206,28 @@ def fsc_par_backwardpass(fs, Ls, LT, max_parallel=10000):
 ###########################################################################
 
 def fsc_par_forwardpass_init_first(x0, nx):
+    """ Initialize first parallel forward pass element for a finite-state controller.
+
+    Parameters:
+        x0: Initial state.
+        nx: Number of states.
+
+    Returns:
+        e: Initialized first element.
+    """
     e = tf.repeat(x0, nx)
     return e
 
 def fsc_par_forwardpass_init_most(fs, us):
+    """ Initialize general parallel forward pass elements for a finite-state controller.
+
+    Parameters:
+        fs: Tensor of state transition matrices.
+        us: Tensor of optimal control actions.
+
+    Returns:
+        es: Initialized elements.
+    """
     nb  = fs.shape[0]
     nx  = fs.shape[1]
 
@@ -141,6 +239,15 @@ def fsc_par_forwardpass_init_most(fs, us):
     return es
 
 def fsc_par_comb_f(fij, fjk):
+    """ Combine two parallel forward pass elements for a finite-state controller.
+
+    Parameters:
+        fij: Forward pass element for i -> j.
+        fjk: Forward pass element for j -> k.
+
+    Returns:
+        fik: Forward pass element for i -> k.
+    """
 #    fik = tf.gather_nd(fjk, tf.expand_dims(fij, -1), batch_dims=1)
     fik = tf.gather(fjk, fij, axis=-1, batch_dims=1)
     return fik
@@ -148,6 +255,17 @@ def fsc_par_comb_f(fij, fjk):
 
 @tf.function
 def fsc_par_forwardpass(x0, fs, us, max_parallel=10000):
+    """ Run parallel forward pass for a finite-state controller.
+
+    Parameters:
+        x0: Initial state.
+        fs: Tensor of state transition matrices.
+        us: Tensor of optimal control actions.
+
+    Returns:
+        min_us: Tensor of optimal control actions.
+        min_xs: Tensor of optimal states.
+    """
     first_elem = fsc_par_forwardpass_init_first(x0, fs.shape[1])
     most_elems = fsc_par_forwardpass_init_most(fs, us)
 
@@ -168,6 +286,16 @@ def fsc_par_forwardpass(x0, fs, us, max_parallel=10000):
 ###########################################################################
 
 def fsc_par_fwdbwdpass_init_first(x0, L0):
+    """ Initialize first parallel forward/backward pass elements for a finite-state controller.
+
+    Parameters:
+        x0: Initial state.
+        L0: Initial cost matrix.
+
+    Returns:
+        e: Initialized first element.
+    """
+
     nx = L0.shape[0]
 
     V = 1e20 * tf.ones((nx, nx), dtype=L0.dtype) # TODO: Replace the magic constant with a constant or use "inf"
@@ -178,12 +306,35 @@ def fsc_par_fwdbwdpass_init_first(x0, L0):
     return V
 
 def fsc_par_fwdbwdpass_init_most(fs, Ls):
+    """ Initialize general parallel forward/backward pass elements for a finite-state controller.
+
+    Parameters:
+        fs: Tensor of state transition matrices.
+        Ls: Tensor of cost matrices.
+
+    Returns:
+        Vs: Initialized elements.
+    """
     Vs = fsc_par_backwardpass_init_most(fs, Ls)
     return Vs
 
 
 @tf.function
 def fsc_par_fwdbwdpass(x0, fs, Ls, us, Vs, max_parallel=10000):
+    """ Run parallel forward/backward pass for a finite-state controller.
+
+    Parameters:
+        x0: Initial state.
+        fs: Tensor of state transition matrices.
+        Ls: Tensor of cost matrices.
+        us: Tensor of optimal control actions.
+        Vs: Tensor of optimal cost-to-go matrices.
+        max_parallel: Maximum number of parallel operations for tfp.math.scan_associative.
+
+    Returns:
+        min_us: Tensor of optimal control actions.
+        min_xs: Tensor of optimal states.
+    """
     first_elem = fsc_par_fwdbwdpass_init_first(x0, Ls[0, ...])
     most_elems = fsc_par_fwdbwdpass_init_most(fs, Ls)
 

@@ -7,7 +7,17 @@ Simulated associative scan.
 import math
 
 
-def my_assoc_scan(op,a,reverse=False):
+def my_assoc_scan(op, a, reverse=False):
+    """ Simulated parallel associative scan.
+
+    Parameters:
+        op: Binary associative operator.
+        a:  Array of values.
+        reverse: Whether to compute reverse prefix sums
+
+    Returns:
+        a:  Array of all-prefix-sums.
+    """
     a = a.copy()
     
     if reverse:

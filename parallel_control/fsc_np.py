@@ -10,16 +10,29 @@ import numpy as np
 from parallel_control.my_assoc_scan import my_assoc_scan
 
 ##############################################################################
+#
 # Misc. constants and utilities
+#
 ##############################################################################
 
 _FSC_NP_INFTY = 1e20 # This is used as "infinity" in computations
 
 ##############################################################################
+#
 # Combination functions and general associative scan for FSC
+#
 ##############################################################################
 
 def combine_V(Vij, Vjk):
+    """ Combine two value functions Vij and Vjk into Vik.
+
+    Parameters:
+        Vij: Value function for i -> j
+        Vjk: Value function for j -> k
+
+    Returns:
+        Vik: Value function for i -> k
+    """
     Vik = np.zeros_like(Vij)
     for i in range(Vij.shape[0]):
         for k in range(Vjk.shape[1]):
@@ -28,6 +41,15 @@ def combine_V(Vij, Vjk):
     return Vik
 
 def combine_f(fij, fjk):
+    """ Combine two forward functions fij and fjk into fik.
+
+    Parameters:
+        fij: Forward function for i -> j
+        fjk: Forward function for j -> k
+
+    Returns:
+        fik: Forward function for i -> k
+    """
 #    fik = np.zeros_like(fij)
 #    for i in range(fij.shape[0]):
 #        fik[i] = fjk[fij[i]]
@@ -37,12 +59,36 @@ def combine_f(fij, fjk):
 
 
 def par_backward_pass_scan(elems):
+    """ Run associative scan for parallel backward pass.
+
+    Parameters:
+        elems: List of conditional value function elements
+
+    Returns:
+        List of prefix-summed conditional value function elements
+    """
     return my_assoc_scan(lambda x, y: combine_V(x, y), elems, reverse=True)
 
 def par_forward_pass_scan(elems):
+    """ Run associative scan for parallel backward pass.
+
+    Parameters:
+        elems: List of forward function elements
+
+    Returns:
+        List of prefix-summed forward function elements
+    """
     return my_assoc_scan(lambda x, y: combine_f(x, y), elems, reverse=False)
 
 def par_fwdbwd_pass_scan(elems):
+    """ Run associative scan for parallel forward pass for value functions.
+
+    Parameters:
+        elems: List of conditional value function elements
+
+    Returns:
+        List of prefix-summed conditional value function elements
+    """
     return my_assoc_scan(lambda x, y: combine_V(x, y), elems, reverse=False)
 
 
@@ -55,18 +101,34 @@ def par_fwdbwd_pass_scan(elems):
 class FSC:
     
     def __init__(self, f, L, LT):
+        """ Constructor.
+
+        Parameters:
+            f: Forward functions as list of matrices f[x,u].
+            L: Conditional value functions as list of matrices L[x,u].
+            LT: Terminal value function as matrix LT[x].
+        """
         self.f  = f
         self.L  = L
         self.LT = LT
         self.gamma = 1.0 # TODO: Not yet supported in the parallel version
 
     @classmethod
-    def checkAndExpand(cls,f,L,LT=None,T=None):
+    def checkAndExpand(cls, f, L, LT=None, T=None):
         """
         Create FSC object from given parameters.
         Check that all dimension match and then convert all the indexed
         parameters into lists of length T by replication if they are not
         already.
+
+        Parameters:
+            f: Forward functions matrix or list of matrices f[x,u].
+            L: Conditional value functions matrix or list of matrices L[x,u].
+            LT: Terminal value function matrix LT[x] (default ones).
+            T: Number of time steps (default None in which case deduced).
+
+        Returns:
+            FSC object.
         """
         if isinstance(f, list):
             T = len(f)
@@ -105,6 +167,12 @@ class FSC:
     ###########################################################################
 
     def seqBackwardPass(self):
+        """ Run sequential backward pass.
+
+        Returns:
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+            V_list: List of optimal value functions for k=0,...,T.
+        """
         T = len(self.f)
         V = self.LT
         
@@ -129,7 +197,17 @@ class FSC:
         return u_list, V_list
     
 
-    def seqForwardPass(self,x0,u_list):
+    def seqForwardPass(self, x0, u_list):
+        """ Run sequential forward pass.
+
+        Parameters:
+            x0: Initial state.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+
+        Returns:
+            min_u_list: List of optimal controls for k=0,...,T-1.
+            min_x_list: List of optimal states for k=0,...,T.
+        """
         T = len(u_list)
 
         x = x0
@@ -147,6 +225,15 @@ class FSC:
 
 
     def seqSimulation(self, x0, u_list):
+        """ Run sequential simulation.
+
+        Parameters:
+            x0: Initial state.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+
+        Returns:
+            x_list: List of states for k=0,...,T.
+        """
         T = len(u_list)
 
         x = x0
@@ -165,6 +252,11 @@ class FSC:
     ###########################################################################
 
     def parBackwardPass_init(self):
+        """ Initialize parallel backward pass elements.
+
+        Returns:
+            elems: List of elements to be used in parallel backward pass.
+        """
         T = len(self.f)
         xdim = self.f[0].shape[0]
         udim = self.f[0].shape[1]
@@ -190,7 +282,17 @@ class FSC:
 
         return elems
 
-    def parBackwardPass_extract(self,elems):
+    def parBackwardPass_extract(self, elems):
+        """ Extract results from parallel backward pass elements.
+
+        Parameters:
+            elems: List of elements from the parallel backward pass.
+
+        Returns:
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+            V_list: List of optimal value functions for k=0,...,T.
+        """
+
         V_list = [elems[0][:,0]]
         u_list = []
         for k in range(len(elems)-1):
@@ -207,6 +309,12 @@ class FSC:
         return u_list, V_list
 
     def parBackwardPass(self):
+        """ Run parallel backward pass.
+
+        Returns:
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+            V_list: List of optimal value functions for k=0,...,T.
+        """
         elems = self.parBackwardPass_init()
         elems = par_backward_pass_scan(elems)
         u_list, V_list = self.parBackwardPass_extract(elems)
@@ -216,7 +324,16 @@ class FSC:
     # Parallel forward pass with function decomposition
     ###########################################################################
 
-    def parForwardPass_init(self,x0,u_list):
+    def parForwardPass_init(self, x0, u_list):
+        """ Initialize parallel forward pass elements.
+
+        Parameters:
+            x0: Initial state.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+
+        Returns:
+            elems: List of elements to be used in parallel forward pass.
+        """
         T = len(self.f)
         xdim = self.f[0].shape[0]
         elems = []
@@ -236,7 +353,17 @@ class FSC:
 
         return elems
 
-    def parForwardPass_extract(self,elems,u_list):
+    def parForwardPass_extract(self, elems, u_list):
+        """ Extract results from parallel forward pass elements.
+
+        Parameters:
+            elems: List of elements from the parallel forward pass.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+
+        Returns:
+            min_u_list: List of optimal controls for k=0,...,T-1.
+            min_x_list: List of optimal states for k=0,...,T.
+        """
         min_u_list = []
         min_x_list = []
 
@@ -249,7 +376,17 @@ class FSC:
 
         return min_u_list, min_x_list
 
-    def parForwardPass(self,x0,u_list):
+    def parForwardPass(self, x0, u_list):
+        """ Run parallel forward pass.
+
+        Parameters:
+            x0: Initial state.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+
+        Returns:
+            min_u_list: List of optimal controls for k=0,...,T-1.
+            min_x_list: List of optimal states for k=0,...,T.
+        """
         elems = self.parForwardPass_init(x0,u_list)
         elems = par_forward_pass_scan(elems)
         min_u_list, min_x_list = self.parForwardPass_extract(elems,u_list)
@@ -262,6 +399,14 @@ class FSC:
     ###########################################################################
 
     def parFwdBwdPass_init(self,x0):
+        """ Initialize parallel forward-backward pass forward elements.
+
+        Parameters:
+            x0: Initial state.
+
+        Returns:
+            elems: List of elements to be used in parallel value function forward pass.
+        """
         T = len(self.f)
         xdim = self.f[0].shape[0]
         udim = self.f[0].shape[1]
@@ -287,6 +432,17 @@ class FSC:
         return elems
 
     def parFwdBwdPass_extract(self,elems,u_list,V_list):
+        """ Extract results from parallel forward-backward pass elements.
+
+        Parameters:
+            elems: List of elements from the parallel forward-backward pass.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+            V_list: List of optimal value functions for k=0,...,T.
+
+        Returns:
+            min_u_list: List of optimal controls for k=0,...,T-1.
+            min_x_list: List of optimal states for k=0,...,T.
+        """
         min_u_list = []
         min_x_list = []
 
@@ -301,6 +457,17 @@ class FSC:
         return min_u_list, min_x_list
 
     def parFwdBwdPass(self,x0,u_list,V_list):
+        """ Run parallel forward-backward pass.
+
+        Parameters:
+            x0: Initial state.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+            V_list: List of optimal value functions for k=0,...,T.
+
+        Returns:
+            min_u_list: List of optimal controls for k=0,...,T-1.
+            min_x_list: List of optimal states for k=0,...,T.
+        """
         elems = self.parFwdBwdPass_init(x0)
         elems = par_fwdbwd_pass_scan(elems)
         min_u_list, min_x_list = self.parFwdBwdPass_extract(elems,u_list,V_list)
@@ -313,6 +480,11 @@ class FSC:
     ###########################################################################
 
     def parFwdBwdPass2_init(self):
+        """ Initialize parallel forward-backward pass forward (v2) elements.
+
+        Returns:
+            elems: List of elements to be used in parallel value function forward pass.
+        """
         T = len(self.f)
         xdim = self.f[0].shape[0]
         udim = self.f[0].shape[1]
@@ -334,6 +506,18 @@ class FSC:
         return elems
 
     def parFwdBwdPass2_extract(self,x0,elems,u_list,V_list):
+        """ Extract results from parallel forward-backward pass (v2) elements.
+
+        Parameters:
+            x0: Initial state.
+            elems: List of elements from the parallel forward-backward pass.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+            V_list: List of optimal value functions for k=0,...,T.
+
+        Returns:
+            min_u_list: List of optimal controls for k=0,...,T-1.
+            min_x_list: List of optimal states for k=0,...,T.
+        """
         min_u_list = []
         min_x_list = []
 
@@ -351,6 +535,17 @@ class FSC:
         return min_u_list, min_x_list
 
     def parFwdBwdPass2(self,x0,u_list,V_list):
+        """ Run parallel forward-backward pass (v2).
+
+        Parameters:
+            x0: Initial state.
+            u_list: List of optimal actions vectors for k=0,...,T-1.
+            V_list: List of optimal value functions for k=0,...,T.
+
+        Returns:
+            min_u_list: List of optimal controls for k=0,...,T-1.
+            min_x_list: List of optimal states for k=0,...,T.
+        """
         elems = self.parFwdBwdPass2_init()
         elems = par_fwdbwd_pass_scan(elems)
         min_u_list, min_x_list = self.parFwdBwdPass2_extract(x0,elems,u_list,V_list)
@@ -362,6 +557,17 @@ class FSC:
     ###########################################################################
 
     def batch_solution(self,x0):
+        """ Compute batch solution to the problem.
+
+        Parameters:
+            x0: Initial state.
+
+        Returns:
+            min_u_list: List of optimal controls for k=0,...,T-1.
+            min_x_list: List of optimal states for k=0,...,T.
+            min_cost: Minimum cost.
+        """
+
         T = len(self.f)
 
         u_list     = [0] * T
@@ -407,6 +613,15 @@ class FSC:
     ###########################################################################
 
     def cost(self, x_list, u_list):
+        """ Compute cost of a given trajectory.
+
+        Parameters:
+            x_list: List of states.
+            u_list: List of controls.
+
+        Returns:
+            res: Cost of the trajectory.
+        """
         xT = x_list[-1]
         res = self.LT[xT]
         for k in range(len(u_list)):

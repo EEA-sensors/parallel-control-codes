@@ -14,11 +14,15 @@ import parallel_control.fsc_tf as fsc_tf
 import time
 
 ###############################################################################################
+#
 # General finite model speedtests
+#
 ###############################################################################################
 
 @tf.function
 def fsc_seq_bw(fs, Ls, LT):
+    """ Run sequential backward pass for a finite-state controller.
+    """
     us, Vs = fsc_tf.fsc_seq_backwardpass(fs, Ls, LT)
     return us, Vs
 
@@ -68,7 +72,7 @@ def fsc_par_bw_speedtest(fsc_gen, n_iter=10, device='/CPU:0'):
 @tf.function
 def fsc_seq_bwfw(x0, fs, Ls, LT):
     us, Vs = fsc_tf.fsc_seq_backwardpass(fs, Ls, LT)
-    min_us_tf_par, min_xs_tf_par = fsc_tf.fsc_seq_forwardpass(x0, fs, us)
+    min_us_tf_par, min_xs_tf_par = fsc_tf.fsc_seq_forwardpass(x0, fs, us)  # XXX: Outputs the wrong way
     return min_us_tf_par, min_xs_tf_par
 
 def fsc_seq_bwfw_speedtest(fsc_gen, n_iter=10, device='/CPU:0'):

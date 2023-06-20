@@ -104,13 +104,13 @@ class CLQT_tf_UnitTest(unittest.TestCase):
         Kxs_ref = tf.vectorized_map(K_ref, tf.reshape(t_list, shape=(tf.size(t_list),1,1)))[:steps,:,:]
         Ss_ref = tf.vectorized_map(S_ref, tf.reshape(t_list, shape=(tf.size(t_list),1,1)))
 
-        plt.plot(t_list[:steps],Kxs_ref[:,0,0])
-        plt.plot(t_list[:steps],Kxs[:,0,0],'--')
-        plt.show()
+#        plt.plot(t_list[:steps],Kxs_ref[:,0,0])
+#        plt.plot(t_list[:steps],Kxs[:,0,0],'--')
+#        plt.show()
 
-        plt.plot(t_list,Ss_ref[:,0,0])
-        plt.plot(t_list,Ss[:,0,0],'--')
-        plt.show()
+#        plt.plot(t_list,Ss_ref[:,0,0])
+#        plt.plot(t_list,Ss[:,0,0],'--')
+#        plt.show()
 
         self.assertTrue(tf.math.abs(Ss[i] - S_ref(t)) < 1e-5)
         self.assertTrue(tf.math.abs(Kxs[i] - K_ref(t)) < 1e-5)
@@ -401,10 +401,10 @@ class CLQT_tf_UnitTest(unittest.TestCase):
         us2b = tf.convert_to_tensor(u_list2b, dtype=tf.float64)
         xs2b = tf.convert_to_tensor(x_list2b, dtype=tf.float64)
 
-        t = tf.range(0, steps, dtype=tf.float64) * dt
-        plt.plot(t, xs1a[1:])
-        plt.plot(t, xs2a[1:], '--')
-        plt.show()
+#        t = tf.range(0, steps, dtype=tf.float64) * dt
+#        plt.plot(t, xs1a[1:])
+#        plt.plot(t, xs2a[1:], '--')
+#        plt.show()
 
         err = tf.reduce_max(tf.math.abs(us1a - us2a))
         print(err)
@@ -444,10 +444,10 @@ class CLQT_tf_UnitTest(unittest.TestCase):
         us2b = tf.convert_to_tensor(u_list2b, dtype=tf.float64)
         xs2b = tf.convert_to_tensor(x_list2b, dtype=tf.float64)
 
-        t = tf.range(0, steps, dtype=tf.float64) * dt
-        plt.plot(t, xs1a[1:])
-        plt.plot(t, xs2a[1:], '--')
-        plt.show()
+#        t = tf.range(0, steps, dtype=tf.float64) * dt
+#        plt.plot(t, xs1a[1:])
+#        plt.plot(t, xs2a[1:], '--')
+#        plt.show()
 
         err = tf.reduce_max(tf.math.abs(us1a - us2a))
         print(err)
@@ -649,10 +649,10 @@ class CLQT_tf_UnitTest(unittest.TestCase):
         us2 = tf.convert_to_tensor(u_list2, dtype=tf.float64)
         xs2 = tf.convert_to_tensor(x_list2, dtype=tf.float64)
 
-        t = tf.range(0, steps, dtype=tf.float64) * dt
-        plt.plot(t, xs1[1:])
-        plt.plot(t, xs2[1:], '--')
-        plt.show()
+#        t = tf.range(0, steps, dtype=tf.float64) * dt
+#        plt.plot(t, xs1[1:])
+#        plt.plot(t, xs2[1:], '--')
+#        plt.show()
 
         err = tf.reduce_max(tf.math.abs(us1 - us2))
         print(err)

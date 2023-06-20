@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Finite-state model which represents data and discrete model for a simple game.
 
@@ -11,12 +9,27 @@ import parallel_control.fsc_np as fsc_np
 
 
 ###########################################################################
+#
+# Finite-state model example
+#
+###########################################################################
 
 class FiniteModel:
     def __init__(self, seed=123):
+        """ Constructor. """
         self.seed = seed
 
     def genData(self, T, nx=21):
+        """ Generate a game scene from the model.
+
+        Parameters:
+            T: Number of time steps.
+            nx: Number of states.
+
+        Returns:
+            track: nx * T array representing the scene.
+            x0: Initial state.
+        """
 
         rng = np.random.default_rng(self.seed)
 
@@ -49,6 +62,14 @@ class FiniteModel:
 
 
     def getFSC(self, track):
+        """ Get finite-state controller for the game.
+
+        Parameters:
+            track: nx * T array representing the scene.
+
+        Returns:
+            fsc: Finite-state controller.
+        """
         xdim = track.shape[0]
         udim = 3
         T = track.shape[1]

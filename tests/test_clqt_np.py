@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Unit tests for continuous-time numpy-based Linear Quadratic Regulator and Tracker routines.
 
@@ -1081,12 +1079,10 @@ class CLQT_np_UnitTest(unittest.TestCase):
         u_list3, x_list3 = clqt.seqForwardPass(x0, Kx_list3, d_list3, u_zoh=False)
 
 
-        dt = clqt.T / steps / blocks
-        t = np.arange(steps * blocks) * dt
-#        plt.plot(t,[tmp[0] for tmp in x_list1[1:]],'r')
-#        plt.plot(t,[tmp[0] for tmp in x_list3[1:]],'k--')
-        plt.plot(t, [tmp1[0]-tmp2[0] for tmp1, tmp2 in zip(x_list1[1:], x_list3[1:])], 'k--')
-        plt.show()
+#        dt = clqt.T / steps / blocks
+#        t = np.arange(steps * blocks) * dt
+#        plt.plot(t, [tmp1[0]-tmp2[0] for tmp1, tmp2 in zip(x_list1[1:], x_list3[1:])], 'k--')
+#        plt.show()
 
         err = max([linalg.norm(e1 - e2) for e1, e2 in zip(u_list1, u_list2)])
         print(err)

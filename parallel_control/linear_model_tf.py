@@ -8,10 +8,21 @@ its NumPy version to TF. However, for CLQT we have a separate implementation.
 import tensorflow as tf
 import numpy as np
 
+# Abbreviations for convenience
 mm = tf.linalg.matmul
 mv = tf.linalg.matvec
 
 def get_clqt(dtype=tf.float64):
+    """ Get CLQT for the linear model.
+
+    Parameters:
+        dtype: Data type.
+
+    Returns:
+        x0: Initial state.
+        T: Time horizon.
+        XT, HT, rT, F_f, L_f, X_f, U_f, c_f, H_f, r_f: CLQT parameters
+    """
     dp = lambda v: tf.constant(v, dtype=dtype)
 
     U_f = lambda t: dp(0.1) * tf.eye(2, dtype=dtype)

@@ -24,15 +24,33 @@ import numpy as np
 import math
 import parallel_control.disc as disc
 import parallel_control.lqt_np as lqt_np
+import parallel_control.clqt_np as clqt_np
 
+###########################################################################
+#
+# Example linear model (of Wiener velocity type)
+#
 ###########################################################################
 
 class LinearModel:
 
     def __init__(self, seed=123):
+        """ Form simple linear model with quadratic cost.
+
+        Parameters:
+            seed: Random seed (default 123).
+        """
         self.seed = seed
 
     def genData(self, N):
+        """ Generate data.
+
+        Parameters:
+            N: Number of data points.
+
+        Returns:
+            xy: State trajectory.
+        """
         rng = np.random.default_rng(self.seed)
 
         x0 = 0.0
@@ -77,6 +95,16 @@ class LinearModel:
         return xy
 
     def getLQT(self, xy, steps=10):
+        """ Get discrete-time LQT for the model.
+        
+        Parameters:
+            xy: State trajectory.
+            steps: Number of steps between points (default 10).
+            
+        Returns:
+            lqt: Discrete-time LQT
+            x0: Initial state.
+        """
         dt = 1.0 / steps
 
         U = 0.1 * np.eye(2)
@@ -128,3 +156,57 @@ class LinearModel:
 
         return lqt, x0
 
+    def getCLQT(self):
+        """ Get continuous-time LQT for the model.
+
+        Returns:
+            clqt: Continuous-time LQT
+            x0: Initial state.
+        """
+        U = lambda t: 0.1 * np.eye(2)
+        H = lambda t: np.array([[1.0,0.0,0.0,0.0], [0.0,1.0,0.0,0.0]])
+        HT = np.eye(4)
+        X  = lambda t: 1.0 * np.eye(2)
+        XT = 1.0 * np.eye(4)
+
+        F = lambda t: np.array([[0.0, 0.0, 1.0, 0.0],
+                                [0.0, 0.0, 0.0, 1.0],
+                                [0.0, 0.0, 0.0, 0.0],
+                                [0.0, 0.0, 0.0, 0.0]])
+        L = lambda t: np.array([[0.0,0.0],
+                                [0.0,0.0],
+                                [1.0,0.0],
+                                [0.0,1.0]])
+        c = lambda t: np.zeros((4,))
+
+        cx = np.array([5.7770, -2.6692, 1.1187, 0.1379, 0.5718, 1.1214,
+                       0.2998, 0.3325, 0.7451, 0.2117, 0.6595, 0.0401, -0.2995])
+        cy = np.array([4.3266, -1.4584, -1.2457, 1.1804, 0.2035, 0.5123,
+                       1.0588, 0.2616, -0.6286, -0.3802, 0.2750, -0.0070, -0.0022])
+
+        r = lambda t: np.array([ cx[0] +
+            cx[1] * np.cos(2.0 * np.pi * t / 50.0) + cx[2] * np.sin(2.0 * np.pi * t / 50.0) +
+            cx[3] * np.cos(4.0 * np.pi * t / 50.0) + cx[4] * np.sin(4.0 * np.pi * t / 50.0) +
+            cx[5] * np.cos(6.0 * np.pi * t / 50.0) + cx[6] * np.sin(6.0 * np.pi * t / 50.0) +
+            cx[7] * np.cos(8.0 * np.pi * t / 50.0) + cx[8] * np.sin(8.0 * np.pi * t / 50.0) +
+            cx[9] * np.cos(10.0 * np.pi * t / 50.0) + cx[10] * np.sin(10.0 * np.pi * t / 50.0) +
+            cx[11] * np.cos(12.0 * np.pi * t / 50.0) + cx[12] * np.sin(12.0 * np.pi * t / 50.0),
+            cy[0] +
+            cy[1] * np.cos(2.0 * np.pi * t / 50.0) + cy[2] * np.sin(2.0 * np.pi * t / 50.0) +
+            cy[3] * np.cos(4.0 * np.pi * t / 50.0) + cy[4] * np.sin(4.0 * np.pi * t / 50.0) +
+            cy[5] * np.cos(6.0 * np.pi * t / 50.0) + cy[6] * np.sin(6.0 * np.pi * t / 50.0) +
+            cy[7] * np.cos(8.0 * np.pi * t / 50.0) + cy[8] * np.sin(8.0 * np.pi * t / 50.0) +
+            cy[9] * np.cos(10.0 * np.pi * t / 50.0) + cy[10] * np.sin(10.0 * np.pi * t / 50.0) +
+            cy[11] * np.cos(12.0 * np.pi * t / 50.0) + cy[12] * np.sin(12.0 * np.pi * t / 50.0)])
+
+        T  = 50.0
+
+#        rT = r(50.0)
+#        rT = np.array([rT[0], rT[1], 0.0, 0.0])
+        rT = np.array([4.9514, 4.4353, 0.0, 0.0])
+
+        x0 = np.array([5.0,5.0,0.0,0.0])
+
+        clqt = clqt_np.CLQT(F, L, X, U, XT, c, H, r, HT, rT, T)
+
+        return clqt, x0

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Unit tests for finite state control (FSC) via dynamic programming with numpy.
 

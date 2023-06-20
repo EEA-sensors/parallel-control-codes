@@ -8,13 +8,20 @@ import numpy as np
 import tensorflow as tf
 import math
 
+# Abbreviations for linear algebra functions
 mm = tf.linalg.matmul
 mv = tf.linalg.matvec
 
-# Form a block diagonal (batches) tensor from given (batch of) matrix blocks.
-# blocks should be N*M*K*L, where N is the batch index, M indices of blocks,
-# and the blocks are K*L matrices. Returns N*(M*K)*(M*L) tensor.
 def _create_blkdiag(blocks):
+    """ Create a block-diagonal matrix from given matrix blocks.
+
+    Parameters:
+        blocks: Matrix blocks.
+
+    Returns:
+        block_diag: Block diagonal matrix.
+    """
+
     M, K, L = blocks.shape
     splitted_blocks = [b[0] for b in tf.split(blocks, M)]
     full_ops = [tf.linalg.LinearOperatorFullMatrix(b, is_square=False) for b in splitted_blocks]
@@ -22,9 +29,28 @@ def _create_blkdiag(blocks):
     return block_diag_ops.to_dense()
 
 def create_blkdiag(blocks):
+    """ Form a block diagonal (batched) tensor from given (batch of) matrix blocks.
+    The blocks should be N*M*K*L, where N is the batch index, M indices of blocks,
+    and the blocks are K*L matrices. Returns N*(M*K)*(M*L) tensor.
+
+    Parameters:
+        blocks: (batch of) matrix blocks.
+
+    Returns:
+        block_diag: (batch of) block diagonal matrices.
+    """
     return tf.vectorized_map(_create_blkdiag, blocks, fallback_to_while_loop=False)
 
 def condense(Fs, cs, Ls, Hs, rs, Xs, Us, Nc):
+    """ Partially condense a given LQT.
+
+    Parameters:
+        Fs, cs, Ls, Hs, rs, Xs, Us: LQT to be condensed.
+        Nc: Number of condensed steps.
+
+    Returns:
+        Fstar, cstar, Lstar, Hstar, rstar, Xstar, Ustar, Mstar, sstar, Lambda, cbar, Lbar: Condensed LQT.
+    """
     T = Fs.shape[0]
 
     # Append trivial dynamics if needed
@@ -108,6 +134,21 @@ def condense(Fs, cs, Ls, Hs, rs, Xs, Us, Nc):
     return Fstar, cstar, Lstar, Hstar, rstar, Xstar, Ustar, Mstar, sstar, Lambda, cbar, Lbar
 
 def convertUX(cond_us, cond_xs, Lambda, cbar, Lbar, T):
+    """ Convert condensed controls and states to uncondensed controls and states.
+
+    Parameters:
+        cond_us: Condensed controls
+        cond_xs: Condensed states
+        Lambda: Lambda matrix
+        cbar: cbar vector
+        Lbar: Lbar matrix
+        T: Total time steps
+
+    Returns:
+        us: Uncondensed controls
+        xs: Uncondensed states
+    """
+
     xs_blocks = mv(Lambda, cond_xs[:-1,:]) + cbar + mv(Lbar, cond_us)
     xdim = cond_xs.shape[1]
     Tc = xs_blocks.shape[0]

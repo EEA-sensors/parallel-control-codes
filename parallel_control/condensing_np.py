@@ -10,12 +10,19 @@ from scipy import linalg
 import numpy as np
 import parallel_control.lqt_np as lqt_np
 
+##############################################################################
+#
+# Partial condensing for LQT
+#
+##############################################################################
+
 class LQTCondenser:
     """
     LQT Condenser class
     """
 
     def __init__(self):
+        """ Constructor. """
         self.xdim = []
         self.udim = []
         self.Nc = []
@@ -25,6 +32,15 @@ class LQTCondenser:
         self.Lbar_list = []
 
     def condense(self, lqt, Nc):
+        """ Partially condense a given LQT.
+
+        Parameters:
+            lqt: LQT to be condensed.
+            Nc: Number of condensed steps.
+
+        Returns:
+            clqt: Condensed LQT.
+        """
         xdim = lqt.F[0].shape[0]
         udim = lqt.L[0].shape[1]
         rdim = lqt.H[0].shape[0]
@@ -156,6 +172,16 @@ class LQTCondenser:
         return clqt
 
     def convertUX(self, clqt_u_list, clqt_x_list):
+        """ Convert condensed controls and states to uncondensed controls and states.
+
+        Parameters:
+            clqt_u_list: List of condensed controls
+            clqt_x_list: List of condensed states
+
+        Returns:
+            u_list: List of uncondensed controls
+            x_list: List of uncondensed states
+        """
         udim = self.udim
         xdim = self.xdim
         Nc = self.Nc

@@ -222,7 +222,7 @@ class LQT_tf_UnitTest(unittest.TestCase):
         us = tf.convert_to_tensor(u_list1)
         xs = tf.convert_to_tensor(x_list1)
 
-        cost1 = lqt.cost(x_list1,u_list1)
+        cost1 = lqt.cost(u_list1, x_list1)
         cost2 = lqt_tf.lqt_cost(xs, us, Hs, HT, rs, rT, Xs, XT, Us)
 
         self.assertTrue(tf.abs(cost2 - cost1) < 1e-10)

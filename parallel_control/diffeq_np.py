@@ -8,6 +8,20 @@ from scipy import linalg
 import numpy as np
 
 def rk4(f, dt, x, t=None, param=None):
+    """ Runge-Kutta 4th order integrator for ODEs of the form dx/dt = f(x) or dx/dt = f(x,t) or dx/dt = f(x,t,param)
+    where x is a tensor, t is a scalar, and param contains free-form parameters. Note that this function is not
+    dependent on NumPy per se and hence is compatible with JAX.
+
+    Parameters:
+        f: Function of the right hand side of ODE.
+        dt: Time step.
+        x: State vector (tensor).
+        t: Time (default None), if None then form f(x) is used.
+        param: Free-form parameters (default None), if None then form f(x,t) is used.
+
+    Returns:
+        x: Updated state vector.
+    """
     if t is None:
         if param is None:
             dx1 = f(x) * dt
