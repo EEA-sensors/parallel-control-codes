@@ -124,6 +124,6 @@ Furthermore, a good source for all kinds of classical filters and smoothers is t
 Kalman filters, RTS smoothers, and LQT regulators are closely related in two ways:
 
 1. Kalman filter and RTS smoother are "duals" of LQT.
-2. Kalman filter and RTS smoother can be derived as a special case of Viterbi algorithm 
+2. Kalman filter and RTS smoother can be derived as a special case of Viterbi algorithm for a linear Gaussian state-space model.
 
 *Exercise:* Use the parallel LQT codes in this repository to implement parallel Kalman filters and smoothers introduced in [5] using one or both of the points of view above.
