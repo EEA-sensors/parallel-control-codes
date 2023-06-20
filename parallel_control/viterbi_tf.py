@@ -1,6 +1,5 @@
 """
-TensorFlow-based Viterbi algorithm implementation via its associated optimal control problem
-(though the parallel ones are not really implemented in parallel but simulated).
+TensorFlow-based Viterbi algorithm implementation via its associated optimal control problem along with direct ones.
 
 @author: Simo Särkkä
 """
